@@ -19,7 +19,26 @@ class TempRepoHolder:
         self.temp_dir = tempfile.mkdtemp()
         data_name = os.path.join(os.path.dirname(__file__), 'data', self.name + '.tar')
         with tarfile.open(name=data_name, mode='r') as archive:
-            archive.extractall(self.temp_dir)
+            def is_within_directory(directory, target):
+                
+                abs_directory = os.path.abspath(directory)
+                abs_target = os.path.abspath(target)
+            
+                prefix = os.path.commonprefix([abs_directory, abs_target])
+                
+                return prefix == abs_directory
+            
+            def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+            
+                for member in tar.getmembers():
+                    member_path = os.path.join(path, member.name)
+                    if not is_within_directory(path, member_path):
+                        raise Exception("Attempted Path Traversal in Tar File")
+            
+                tar.extractall(path, members, numeric_owner=numeric_owner) 
+                
+            
+            safe_extract(archive, self.temp_dir)
         return self.temp_dir
 
     def __exit__(self, exc_type, exc_val, exc_tb):
